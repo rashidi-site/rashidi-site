@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+/* Custom Fonts */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    background-color: #0f172a;
+    color: #f8fafc;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* RTL Support */
+  [dir="rtl"] {
+    text-align: right;
+  }
+}
+
+/* Custom Scrollbar */
+@layer utilities {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5);
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #d4af37, #f59e0b);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #f59e0b, #d4af37);
+  }
+}
+
+/* Glassmorphism Effects */
+@layer utilities {
+  .glass-card {
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+  }
+  
+  .glass-card:hover {
+    border-color: rgba(212, 175, 55, 0.3);
+  }
+}
+
+/* Golden Gradient Text */
+@layer utilities {
+  .gold-text {
+    background: linear-gradient(to right, #fcd34d, #f59e0b, #d4af37);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* Urdu Typography */
+@layer utilities {
+  .urdu-text {
+    font-family: 'Noto Nastaliq Urdu', serif;
+    direction: rtl;
+    text-align: right;
+    line-height: 2.5;
+  }
+  
+  .arabic-text {
+    font-family: 'Amiri', serif;
+    direction: rtl;
+    text-align: center;
+  }
+}
+
+/* Smooth Animations */
+@layer utilities {
+  .smooth-scroll {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Selection Color */
+::selection {
+  background-color: rgba(212, 175, 55, 0.3);
+  color: #f8fafc;
+}
+
+/* Focus Styles */
+@layer utilities {
+  *:focus-visible {
+    outline: 2px solid #d4af37;
+    outline-offset: 2px;
+  }
+}
+
+/* Loading Animation */
+@layer utilities {
+  .animate-pulse-gold {
+    animation: pulse-gold 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulse-gold {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+}
+
+/* Gradient Borders */
+@layer utilities {
+  .gradient-border {
+    position: relative;
+  }
+  
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(to right, #d4af37, #f59e0b);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+}
+
+/* Line Clamp */
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
