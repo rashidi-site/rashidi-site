@@ -1,3 +1,4 @@
+import { supabase } from '../../lib/supabase';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -10,15 +11,22 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email === 'admin@abdulwahed.com' && password === 'admin123') {
-      localStorage.setItem('isAdmin', 'true');
-      navigate('/admin/dashboard');
-    } else {
-      setError('Invalid email or password');
-    }
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    setError(error.message);
+    return;
+  }
+
+  navigate('/admin/dashboard');
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-slate-950 via-amber-950/20 to-slate-950">
@@ -92,7 +100,7 @@ export default function AdminLogin() {
           </form>
 
           <p className="text-center text-amber-200/40 text-sm mt-6">
-            Demo: admin@abdulwahed.com / admin123
+            Supabase Admin Login
           </p>
         </div>
       </motion.div>
