@@ -1,52 +1,38 @@
-import { useState } from 'react';
-import { supabase } from '../../lib/supabase';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { Lock, Pen, Eye, EyeOff } from 'lucide-react';
+import { useState } from "react";
+import { supabase } from "../../lib/supabase";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { Lock, Pen, Eye, EyeOff } from "lucide-react";
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-  e.preventDefault();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-  if (error) {
-    setError(error.message);
-    return;
-  }
+    setError("");
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  console.log(session);
+    console.log("DATA:", data);
+    console.log("ERROR:", error);
 
-  navigate("/admin/dashboard");
-};
+    if (error) {
+      setError(error.message);
+      return;
+    }
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-  email,
-  password,
-});
+    navigate("/admin/dashboard");
+  };
 
-console.log("DATA:", data);
-console.log("ERROR:", error);
-
-if (error) {
-  setError(error.message);
-  return;
-}
-
-navigate("/admin/dashboard");
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-slate-950 via-amber-950/20 to-slate-950">
       <motion.div
@@ -58,45 +44,61 @@ navigate("/admin/dashboard");
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 via-yellow-500 to-amber-600 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-amber-500/30">
             <Pen className="w-10 h-10 text-slate-950" />
           </div>
-          <h1 className="text-3xl font-bold text-amber-400 mb-2" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
+
+          <h1
+            className="text-3xl font-bold text-amber-400 mb-2"
+            style={{ fontFamily: "Noto Nastaliq Urdu, serif" }}
+          >
             انتظامی پنل
           </h1>
+
           <p className="text-amber-200/60">Admin Panel Login</p>
         </div>
 
         <div className="p-8 rounded-2xl bg-slate-900/50 backdrop-blur-xl border border-amber-500/20 shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-amber-200/80 text-sm mb-2">Email</label>
-              <div className="relative">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-amber-500/20 text-white placeholder-amber-200/40 focus:outline-none focus:border-amber-500 transition-colors"
-                  placeholder="admin@abdulwahed.com"
-                />
-              </div>
+              <label className="block text-amber-200/80 text-sm mb-2">
+                Email
+              </label>
+
+              <input
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-amber-500/20 text-white placeholder-amber-200/40 focus:outline-none focus:border-amber-500 transition-colors"
+                placeholder="admin@abdulwahed.com"
+              />
             </div>
 
             <div>
-              <label className="block text-amber-200/80 text-sm mb-2">Password</label>
+              <label className="block text-amber-200/80 text-sm mb-2">
+                Password
+              </label>
+
               <div className="relative">
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="w-full px-4 py-3 pr-12 rounded-xl bg-slate-800/50 border border-amber-500/20 text-white placeholder-amber-200/40 focus:outline-none focus:border-amber-500 transition-colors"
                   placeholder="••••••••"
                 />
+
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-400/60 hover:text-amber-400"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
             </div>
