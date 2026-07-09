@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BookOpen, Quote, Image, FileText, Mail, Users, Settings, LogOut, Pen, Plus } from 'lucide-react';
@@ -11,16 +12,18 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const isAdmin = localStorage.getItem('isAdmin');
-    if (!isAdmin) {
+  const checkSession = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
       navigate('/admin');
     }
-  }, [navigate]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('isAdmin');
-    navigate('/admin');
   };
+
+  checkSession();
+}, [navigate]);
 
   const stats = [
     { icon: BookOpen, label: 'Poetry', value: poems.length, color: 'from-amber-500 to-yellow-500' },
@@ -37,7 +40,10 @@ export default function AdminDashboard() {
     { path: '/admin/blog', label: 'Blog', labelUrdu: 'بلاگ', icon: FileText },
     { path: '/admin/messages', label: 'Messages', labelUrdu: 'پیغامات', icon: Mail },
   ];
-
+const handleLogout = async () => {
+  await supabase.auth.signOut();
+  navigate('/admin');
+};
   return (
     <div className="min-h-screen pt-24 pb-16">
       {/* Header */}

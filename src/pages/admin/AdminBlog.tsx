@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Eye, Search, Pen, LogOut } from 'lucide-react';
@@ -9,20 +10,27 @@ export default function AdminBlog() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const isAdmin = localStorage.getItem('isAdmin');
-    if (!isAdmin) {
+  const checkSession = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
       navigate('/admin');
     }
-  }, [navigate]);
+  };
+
+  checkSession();
+}, [navigate]);
 
   const filteredPosts = blogPosts.filter((post) => {
     return post.title.includes(searchQuery) || post.excerpt.includes(searchQuery);
   });
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAdmin');
-    navigate('/admin');
-  };
+  const handleLogout = async () => {
+  await supabase.auth.signOut();
+  navigate('/admin');
+};
 
   const handleDelete = (id: number) => {
     alert(`Blog post with ID ${id} would be deleted`);

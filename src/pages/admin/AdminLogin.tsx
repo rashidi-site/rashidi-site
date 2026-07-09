@@ -1,5 +1,5 @@
-import { supabase } from '../../lib/supabase';
 import { useState } from 'react';
+import { supabase } from '../../lib/supabase';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Pen, Eye, EyeOff } from 'lucide-react';
@@ -11,9 +11,8 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
   e.preventDefault();
-  setError('');
 
   const { error } = await supabase.auth.signInWithPassword({
     email,
@@ -25,9 +24,29 @@ export default function AdminLogin() {
     return;
   }
 
-  navigate('/admin/dashboard');
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  console.log(session);
+
+  navigate("/admin/dashboard");
 };
 
+  const { data, error } = await supabase.auth.signInWithPassword({
+  email,
+  password,
+});
+
+console.log("DATA:", data);
+console.log("ERROR:", error);
+
+if (error) {
+  setError(error.message);
+  return;
+}
+
+navigate("/admin/dashboard");
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-slate-950 via-amber-950/20 to-slate-950">
       <motion.div

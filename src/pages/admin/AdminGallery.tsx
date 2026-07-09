@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Eye, Search, Pen, LogOut, Upload } from 'lucide-react';
@@ -10,11 +11,18 @@ export default function AdminGallery() {
   const [selectedCategory, setSelectedCategory] = useState('');
 
   useEffect(() => {
-    const isAdmin = localStorage.getItem('isAdmin');
-    if (!isAdmin) {
+  const checkSession = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
       navigate('/admin');
     }
-  }, [navigate]);
+  };
+
+  checkSession();
+}, [navigate]);
 
   const filteredImages = galleryImages.filter((image) => {
     const matchesSearch = image.title.includes(searchQuery) || image.description.includes(searchQuery);
@@ -22,10 +30,10 @@ export default function AdminGallery() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAdmin');
-    navigate('/admin');
-  };
+  const handleLogout = async () => {
+  await supabase.auth.signOut();
+  navigate('/admin');
+};
 
   const handleDelete = (id: number) => {
     alert(`Image with ID ${id} would be deleted`);

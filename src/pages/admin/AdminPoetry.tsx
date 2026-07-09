@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+
+import { supabase } from '../../lib/supabase';import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Eye, Search, Pen, LogOut } from 'lucide-react';
 import { poems, categories } from '../../data/poetry';
@@ -12,11 +13,18 @@ export default function AdminPoetry() {
   const [editingPoem, setEditingPoem] = useState<typeof poems[0] | null>(null);
 
   useEffect(() => {
-    const isAdmin = localStorage.getItem('isAdmin');
-    if (!isAdmin) {
+  const checkSession = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
       navigate('/admin');
     }
-  }, [navigate]);
+  };
+
+  checkSession();
+}, [navigate]);
 
   const filteredPoems = poems.filter((poem) => {
     const matchesSearch = poem.title.includes(searchQuery) || poem.urduText.includes(searchQuery);
@@ -24,10 +32,10 @@ export default function AdminPoetry() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAdmin');
-    navigate('/admin');
-  };
+  const handleLogout = async () => {
+  await supabase.auth.signOut();
+  navigate('/admin');
+};
 
   const handleEdit = (poem: typeof poems[0]) => {
     setEditingPoem(poem);

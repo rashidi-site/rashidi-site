@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Pen, LogOut, Mail, User, Calendar, Trash2, Reply } from 'lucide-react';
@@ -27,20 +28,30 @@ export default function AdminMessages() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
 
   useEffect(() => {
-    const isAdmin = localStorage.getItem('isAdmin');
-    if (!isAdmin) {
+  const checkSession = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
       navigate('/admin');
     }
-  }, [navigate]);
+  };
+
+  checkSession();
+}, [navigate]);
+
+  checkSession();
+}, [navigate]);
 
   const filteredMessages = messages.filter((msg) => {
     return msg.name.includes(searchQuery) || msg.subject.includes(searchQuery) || msg.email.includes(searchQuery);
   });
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAdmin');
-    navigate('/admin');
-  };
+  const handleLogout = async () => {
+  await supabase.auth.signOut();
+  navigate('/admin');
+};
 
   const handleDelete = (id: number) => {
     alert(`Message with ID ${id} would be deleted`);
