@@ -28,21 +28,8 @@ export default function AdminMessages() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
 
   useEffect(() => {
-  const checkSession = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      navigate('/admin');
-    }
-  };
-
-  checkSession();
-}, [navigate]);
-
-  checkSession();
-}, [navigate]);
+  // ProtectedRoute already handles authentication
+}, []);
 
   const filteredMessages = messages.filter((msg) => {
     return msg.name.includes(searchQuery) || msg.subject.includes(searchQuery) || msg.email.includes(searchQuery);

@@ -27,6 +27,7 @@ import AdminMessages from './pages/admin/AdminMessages';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Context
 import { ThemeProvider } from './context/ThemeContext';
@@ -44,7 +45,10 @@ export default function App() {
       <div className="fixed inset-0 bg-gradient-to-br from-slate-950 via-amber-950 to-slate-950 flex items-center justify-center">
         <div className="text-center">
           <div className="w-20 h-20 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mb-6 mx-auto" />
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 bg-clip-text text-transparent" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
+          <h1
+            className="text-3xl font-bold bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 bg-clip-text text-transparent"
+            style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+          >
             عبدالواحد راشدی
           </h1>
           <p className="text-amber-200/60 mt-2">Loading...</p>
@@ -58,8 +62,10 @@ export default function App() {
       <Router>
         <div className="min-h-screen bg-slate-950 text-white transition-colors duration-300">
           <Navbar />
+
           <AnimatePresence mode="wait">
             <Routes>
+              {/* Public Routes */}
               <Route path="/" element={<Home />} />
               <Route path="/poetry" element={<Poetry />} />
               <Route path="/quotes" element={<IslamicQuotes />} />
@@ -71,16 +77,58 @@ export default function App() {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/404" element={<NotFound />} />
-              
-              {/* Admin Routes */}
+
+              {/* Admin Login */}
               <Route path="/admin" element={<AdminLogin />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/poetry" element={<AdminPoetry />} />
-              <Route path="/admin/gallery" element={<AdminGallery />} />
-              <Route path="/admin/blog" element={<AdminBlog />} />
-              <Route path="/admin/messages" element={<AdminMessages />} />
+
+              {/* Protected Admin Routes */}
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/poetry"
+                element={
+                  <ProtectedRoute>
+                    <AdminPoetry />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/gallery"
+                element={
+                  <ProtectedRoute>
+                    <AdminGallery />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/blog"
+                element={
+                  <ProtectedRoute>
+                    <AdminBlog />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/messages"
+                element={
+                  <ProtectedRoute>
+                    <AdminMessages />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
           </AnimatePresence>
+
           <Footer />
           <ScrollToTop />
         </div>

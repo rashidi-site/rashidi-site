@@ -107,7 +107,7 @@ export default function AdminMessages() {
                     selectedMessage?.id === msg.id ? 'bg-amber-500/10' : 'hover:bg-amber-500/5'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">\n                    <span className="text-amber-400 font-semibold" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>{msg.name}</span>
+                  <div className="flex items-center justify-between mb-2">                    <span className="text-amber-400 font-semibold" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>{msg.name}</span>
                     {!msg.read && <span className="w-2 h-2 rounded-full bg-green-500" />}
                   </div>
                   <p className="text-amber-200/60 text-sm truncate" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>{msg.subject}</p>
@@ -125,7 +125,7 @@ export default function AdminMessages() {
                 animate={{ opacity: 1 }}
               >
                 <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">\n                    <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 flex items-center justify-center">
+                  <div className="flex items-center gap-4">                    <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 flex items-center justify-center">
                       <User className="w-6 h-6 text-slate-950" />
                     </div>
                     <div>
