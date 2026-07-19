@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BookOpen, Quote, Image, FileText, Mail, Users, Settings, LogOut, Pen, Plus } from 'lucide-react';
+import { BookOpen, Quote, Image, FileText, Mail, Users, LogOut, Pen, Plus } from 'lucide-react';
 import { poems } from '../../data/poetry';
 import { quotes } from '../../data/quotes';
 import { galleryImages } from '../../data/gallery';

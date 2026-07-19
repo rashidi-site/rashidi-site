@@ -1,27 +1,27 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 
 // Pages
-import Home from './pages/Home';
-import Poetry from './pages/Poetry';
-import IslamicQuotes from './pages/IslamicQuotes';
-import About from './pages/About';
-import Gallery from './pages/Gallery';
-import Blog from './pages/Blog';
-import BlogPost from './pages/BlogPost';
-import Contact from './pages/Contact';
-import Privacy from './pages/Privacy';
-import Terms from './pages/Terms';
-import NotFound from './pages/NotFound';
+const Home = lazy(() => import('./pages/Home'));
+const Poetry = lazy(() => import('./pages/Poetry'));
+const IslamicQuotes = lazy(() => import('./pages/IslamicQuotes'));
+const About = lazy(() => import('./pages/About'));
+const Gallery = lazy(() => import('./pages/Gallery'));
+const Blog = lazy(() => import('./pages/Blog'));
+const BlogPost = lazy(() => import('./pages/BlogPost'));
+const Contact = lazy(() => import('./pages/Contact'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Admin Pages
-import AdminLogin from './pages/admin/AdminLogin';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminPoetry from './pages/admin/AdminPoetry';
-import AdminGallery from './pages/admin/AdminGallery';
-import AdminBlog from './pages/admin/AdminBlog';
-import AdminMessages from './pages/admin/AdminMessages';
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminPoetry = lazy(() => import('./pages/admin/AdminPoetry'));
+const AdminGallery = lazy(() => import('./pages/admin/AdminGallery'));
+const AdminBlog = lazy(() => import('./pages/admin/AdminBlog'));
+const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
 
 // Components
 import Navbar from './components/Navbar';
@@ -63,11 +63,13 @@ export default function App() {
         <div className="min-h-screen bg-slate-950 text-white transition-colors duration-300">
           <Navbar />
 
+          <Suspense fallback={<div className="min-h-screen pt-24 text-center text-amber-200" role="status">Loading page…</div>}>
           <AnimatePresence mode="wait">
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Home />} />
               <Route path="/poetry" element={<Poetry />} />
+              <Route path="/poetry/:slug" element={<Poetry />} />
               <Route path="/quotes" element={<IslamicQuotes />} />
               <Route path="/about" element={<About />} />
               <Route path="/gallery" element={<Gallery />} />
@@ -77,6 +79,7 @@ export default function App() {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/404" element={<NotFound />} />
+              <Route path="*" element={<NotFound />} />
 
               {/* Admin Login */}
               <Route path="/admin" element={<AdminLogin />} />
@@ -128,6 +131,7 @@ export default function App() {
               />
             </Routes>
           </AnimatePresence>
+          </Suspense>
 
           <Footer />
           <ScrollToTop />

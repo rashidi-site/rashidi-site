@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useRef, useState } from "react";
 import {
   createPoetry,
   updatePoetry,
@@ -13,7 +13,7 @@ interface PoetryFormProps {
   onCancel: () => void;
 }
 type FormErrors = Partial<Record<"title" | "content" | "author" | "category", string>>;
-const initialFormData: PoetryFormData = {
+const initialFormData = Object.freeze<PoetryFormData>({
   title: "",
   content: "",
   author: "",
@@ -23,7 +23,7 @@ const initialFormData: PoetryFormData = {
   cover_image: "",
   featured: false,
   status: "draft",
-};
+});
 function getInitialFormData(poetry?: Poetry | null): PoetryFormData {
   if (!poetry) {
     return initialFormData;
@@ -59,28 +59,6 @@ export default function PoetryForm({
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEditMode = Boolean(poetry);
-  useEffect(() => {
-    setFormData(getInitialFormData(poetry));
-    setSelectedImage(null);
-    setPreviewUrl(poetry?.cover_image ?? "");
-    setErrors({});
-    setSubmitError("");
-    setIsSlugManuallyEdited(false);
-if (fileInputRef.current) {
-  fileInputRef.current.value = "";
-}
-  }, [poetry]);
-  useEffect(() => {
-    if (!selectedImage) {
-      return undefined;
-    }
-const objectUrl = URL.createObjectURL(selectedImage);
-setPreviewUrl(objectUrl);
-
-return () => {
-  URL.revokeObjectURL(objectUrl);
-};
-  }, [selectedImage]);
   const validate = (): boolean => {
     const nextErrors: FormErrors = {};
 if (!formData.title.trim()) {
@@ -95,7 +73,7 @@ if (!formData.author.trim()) {
   nextErrors.author = "Author is required.";
 }
 
-if (!formData.category) {
+if (!formData.category.trim()) {
   nextErrors.category = "Please select a category.";
 }
 
@@ -165,10 +143,18 @@ if (errors.category) {
     return;
   }
 
+  if (previewUrl.startsWith("blob:")) {
+    URL.revokeObjectURL(previewUrl);
+  }
+
   setSelectedImage(file);
+  setPreviewUrl(file ? URL.createObjectURL(file) : poetry?.cover_image ?? "");
   setSubmitError("");
 };
   const removeImage = () => {
+    if (previewUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(previewUrl);
+    }
     setSelectedImage(null);
     setPreviewUrl("");
     setFormData((current) => ({ ...current, cover_image: "" }));
@@ -206,7 +192,7 @@ try {
     await updatePoetry(poetry.id, payload);
   } else {
     await createPoetry(payload);
-    setFormData(initialFormData);
+    setFormData({ ...initialFormData });
     setSelectedImage(null);
     setPreviewUrl("");
     setIsSlugManuallyEdited(false);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Heart, Share2, X, Facebook, MessageCircle, Send } from 'lucide-react';
+import { Search, Share2, X, Facebook, MessageCircle, Send } from 'lucide-react';
 import { quotes } from '../data/quotes';
 
 const categories = [...new Set(quotes.map(q => q.category))];

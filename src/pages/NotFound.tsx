@@ -59,15 +59,15 @@ export default function NotFound() {
               animate={{
                 opacity: [0, 0.3, 0],
                 y: [0, -100],
-                x: Math.random() * 100 - 50,
+                x: (i % 5) * 25 - 50,
               }}
               transition={{
-                duration: 5 + Math.random() * 5,
+                duration: 5 + (i % 5),
                 repeat: Infinity,
                 delay: i * 0.3,
               }}
               className="absolute w-2 h-2 rounded-full bg-amber-400/30"
-              style={{ left: `${Math.random() * 100}%`, bottom: 0 }}
+              style={{ left: `${(i * 17) % 100}%`, bottom: 0 }}
             />
           ))}
         </div>

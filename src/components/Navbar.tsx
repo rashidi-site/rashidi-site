@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Moon, Sun, Pen } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../context/useTheme';
 
 const navLinks = [
   { path: '/', label: 'ہوم', labelEn: 'Home' },
@@ -27,10 +27,6 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  useEffect(() => {
-    setIsOpen(false);
-  }, [location]);
 
   return (
     <>
@@ -143,6 +139,7 @@ export default function Navbar() {
                   >
                     <Link
                       to={link.path}
+                      onClick={() => setIsOpen(false)}
                       className={`block px-4 py-3 rounded-xl text-lg transition-all ${
                         location.pathname === link.path
                           ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'

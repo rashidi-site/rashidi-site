@@ -22,7 +22,14 @@ export default function ProtectedRoute({
       setLoading(false);
     };
 
-    checkSession();
+    void checkSession();
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthenticated(Boolean(session));
+      setLoading(false);
+    });
+
+    return () => subscription.subscription.unsubscribe();
   }, []);
 
   if (loading) {

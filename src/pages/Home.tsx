@@ -38,7 +38,7 @@ export default function Home() {
                 y: -100,
               }}
               transition={{
-                duration: 10 + Math.random() * 10,
+                duration: 10 + (i % 5) * 2,
                 repeat: Infinity,
                 delay: i * 0.5,
               }}

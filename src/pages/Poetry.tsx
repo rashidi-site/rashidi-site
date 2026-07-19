@@ -1,47 +1,281 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, Heart, Share2, X, Facebook, MessageCircle, Send } from 'lucide-react';
-import { poems, categories } from '../data/poetry';
+import { ArrowLeft, CalendarDays, Eye, Filter, Heart, ImageOff, Search, Sparkles } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getPoetryBySlug, getPublishedPoetry } from '../services/poetryService';
+import type { Poetry } from '../types/poetry';
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+}
+
+function LoadingCard() {
+  return (
+    <div className="rounded-3xl border border-amber-500/10 bg-slate-900/50 p-5 backdrop-blur-xl">
+      <div className="h-36 animate-pulse rounded-2xl bg-slate-800/80" />
+      <div className="mt-4 h-4 w-24 animate-pulse rounded bg-slate-800/80" />
+      <div className="mt-3 h-5 w-3/4 animate-pulse rounded bg-slate-800/80" />
+      <div className="mt-2 h-4 w-full animate-pulse rounded bg-slate-800/70" />
+      <div className="mt-4 h-10 w-full animate-pulse rounded-xl bg-slate-800/80" />
+    </div>
+  );
+}
 
 export default function Poetry() {
+  const navigate = useNavigate();
+  const { slug } = useParams<{ slug?: string }>();
+
+  const [poems, setPoems] = useState<Poetry[]>([]);
+  const [selectedPoem, setSelectedPoem] = useState<Poetry | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedPoem, setSelectedPoem] = useState<typeof poems[0] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredPoems = poems.filter((poem) => {
-    const matchesSearch = poem.title.includes(searchQuery) || 
-                         poem.urduText.includes(searchQuery) ||
-                         poem.englishTranslation.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategory || poem.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  useEffect(() => {
+    let isMounted = true;
 
-  const shareToFacebook = (poem: typeof poems[0]) => {
-    const text = encodeURIComponent(`${poem.title}\n\n${poem.urduText}`);
-    window.open(`https://www.facebook.com/sharer/sharer.php?quote=${text}`, '_blank');
+    const loadPoems = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const publishedPoems = await getPublishedPoetry();
+
+        if (isMounted) {
+          setPoems(publishedPoems);
+        }
+      } catch (loadError) {
+        if (isMounted) {
+          setError('Unable to load poetry right now. Please try again shortly.');
+          console.error(loadError);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadPoems();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!slug) return;
+
+    let isMounted = true;
+
+    const loadSelectedPoem = async () => {
+      setDetailLoading(true);
+      setError(null);
+
+      try {
+        const poem = await getPoetryBySlug(slug);
+
+        if (isMounted) {
+          setSelectedPoem(poem);
+          if (!poem) {
+            setError('The requested poetry entry could not be found.');
+          }
+        }
+      } catch (loadError) {
+        if (isMounted) {
+          setError('Unable to load this poetry entry. Please try again shortly.');
+          console.error(loadError);
+        }
+      } finally {
+        if (isMounted) {
+          setDetailLoading(false);
+        }
+      }
+    };
+
+    void loadSelectedPoem();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
+
+  const categories = useMemo(() => {
+    return Array.from(
+      new Set(
+        poems
+          .map((poem) => poem.category)
+          .filter((category): category is string => Boolean(category)),
+      ),
+    ).sort((firstCategory, secondCategory) => firstCategory.localeCompare(secondCategory));
+  }, [poems]);
+
+  const filteredPoems = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    return poems.filter((poem) => {
+      const matchesSearch =
+        normalizedQuery.length === 0 ||
+        [poem.title, poem.author, poem.category, poem.content]
+          .join(' ')
+          .toLowerCase()
+          .includes(normalizedQuery);
+
+      const matchesCategory =
+        selectedCategory.length === 0 || poem.category === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [poems, searchQuery, selectedCategory]);
+
+  const handleReadMore = (poem: Poetry) => {
+    navigate(`/poetry/${poem.slug}`);
   };
 
-  const shareToWhatsApp = (poem: typeof poems[0]) => {
-    const text = encodeURIComponent(`${poem.title}\n\n${poem.urduText}\n\n${poem.englishTranslation}`);
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory('');
   };
 
-  const shareToTelegram = (poem: typeof poems[0]) => {
-    const text = encodeURIComponent(`${poem.title}\n\n${poem.urduText}\n\n${poem.englishTranslation}`);
-    window.open(`https://t.me/share/url?url=${text}`, '_blank');
-  };
+  if (slug) {
+    return (
+      <div className="min-h-screen bg-slate-950/95 pb-16 pt-24 text-slate-100">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <button
+            type="button"
+            onClick={() => navigate('/poetry')}
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-slate-900/60 px-4 py-2 text-sm font-medium text-amber-200 transition-colors hover:border-amber-500/40 hover:bg-slate-800/80"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to poetry
+          </button>
+
+          {detailLoading && (
+            <div className="rounded-3xl border border-amber-500/10 bg-slate-900/60 p-8 backdrop-blur-xl">
+              <div className="h-6 w-40 animate-pulse rounded bg-slate-800/80" />
+              <div className="mt-6 h-10 w-3/4 animate-pulse rounded bg-slate-800/80" />
+              <div className="mt-4 h-4 w-full animate-pulse rounded bg-slate-800/70" />
+              <div className="mt-3 h-4 w-5/6 animate-pulse rounded bg-slate-800/70" />
+            </div>
+          )}
+
+          {!detailLoading && error && (
+            <div className="rounded-3xl border border-amber-500/20 bg-slate-900/60 p-8 text-center backdrop-blur-xl">
+              <p className="text-lg text-amber-200">{error}</p>
+            </div>
+          )}
+
+          {!detailLoading && selectedPoem && (
+            <motion.article
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="overflow-hidden rounded-[2rem] border border-amber-500/10 bg-slate-900/60 shadow-2xl shadow-black/20 backdrop-blur-xl"
+            >
+              <div className="border-b border-amber-500/10 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-8 sm:p-10">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-sm font-medium text-amber-300">
+                    {selectedPoem.category}
+                  </span>
+                  {selectedPoem.featured && (
+                    <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/15 px-3 py-1 text-sm font-medium text-amber-300">
+                      <Sparkles className="h-4 w-4" />
+                      Featured
+                    </span>
+                  )}
+                </div>
+
+                <h1
+                  className="mt-6 text-3xl font-bold text-amber-400 sm:text-4xl"
+                  style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+                >
+                  {selectedPoem.title}
+                </h1>
+                <p className="mt-3 text-lg text-amber-200/70">By {selectedPoem.author}</p>
+              </div>
+
+              <div className="grid gap-8 p-8 sm:p-10 lg:grid-cols-[1.2fr_0.8fr]">
+                <div>
+                  {selectedPoem.cover_image ? (
+                    <img
+                      src={selectedPoem.cover_image}
+                      alt={selectedPoem.title}
+                      className="h-72 w-full rounded-3xl border border-amber-500/10 object-cover shadow-lg shadow-black/20"
+                    />
+                  ) : (
+                    <div className="flex h-72 w-full items-center justify-center rounded-3xl border border-dashed border-amber-500/20 bg-slate-800/50 text-amber-400/60">
+                      <ImageOff className="h-10 w-10" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-6">
+                  <div className="rounded-3xl border border-amber-500/10 bg-slate-950/50 p-6">
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-amber-200/70">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4" />
+                        {formatDate(selectedPoem.created_at)}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Heart className="h-4 w-4" />
+                        {selectedPoem.likes} likes
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        {selectedPoem.views} views
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-amber-500/10 bg-amber-500/5 p-6">
+                    <p
+                      className="whitespace-pre-line text-xl leading-9 text-amber-100"
+                      style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+                    >
+                      {selectedPoem.content}
+                    </p>
+                  </div>
+
+                  {selectedPoem.english_translation && (
+                    <div className="rounded-3xl border border-amber-500/10 bg-slate-950/50 p-6">
+                      <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-amber-400/80">
+                        English Translation
+                      </h2>
+                      <p className="mt-3 leading-8 text-amber-100/80">
+                        {selectedPoem.english_translation}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.article>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen pt-24 pb-16">
-      {/* Header */}
-      <div className="relative py-16 overflow-hidden">
+    <div className="min-h-screen bg-slate-950/95 pb-16 pt-24 text-slate-100">
+      <div className="relative overflow-hidden py-16">
         <div className="absolute inset-0 bg-gradient-to-b from-amber-950/30 to-transparent" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <h1 className="text-5xl md:text-6xl font-bold mb-4" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
+        <div className="relative mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
+            <h1
+              className="mb-4 text-5xl font-bold md:text-6xl"
+              style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+            >
               <span className="bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
                 شاعری کا مجموعہ
               </span>
@@ -51,168 +285,159 @@ export default function Poetry() {
         </div>
       </div>
 
-      {/* Search & Filter */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+      <div className="mx-auto mb-12 max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="flex flex-col md:flex-row gap-4"
+          className="flex flex-col gap-4 md:flex-row"
         >
-          {/* Search */}
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-400/60" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-amber-400/60" />
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="تلاش کریں..."
-              className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-900/50 backdrop-blur border border-amber-500/20 text-white placeholder-amber-200/40 focus:outline-none focus:border-amber-500 transition-colors"
-              style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search poetry..."
+              className="w-full rounded-2xl border border-amber-500/20 bg-slate-900/50 py-4 pl-12 pr-4 text-white placeholder-amber-200/40 transition-colors outline-none focus:border-amber-500"
             />
           </div>
 
-          {/* Category Filter */}
-          <div className="relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-400/60" />
+          <div className="relative md:w-72">
+            <Filter className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-amber-400/60" />
             <select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="appearance-none w-full md:w-64 pl-12 pr-10 py-4 rounded-xl bg-slate-900/50 backdrop-blur border border-amber-500/20 text-white focus:outline-none focus:border-amber-500 transition-colors cursor-pointer"
+              onChange={(event) => setSelectedCategory(event.target.value)}
+              className="w-full cursor-pointer appearance-none rounded-2xl border border-amber-500/20 bg-slate-900/50 py-4 pl-12 pr-10 text-white transition-colors outline-none focus:border-amber-500"
             >
-              <option value="">تمام زمرے</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+              <option value="">All categories</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
               ))}
             </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-              <svg className="w-4 h-4 text-amber-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
           </div>
+
+          {(searchQuery || selectedCategory) && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="rounded-2xl border border-amber-500/20 bg-slate-900/50 px-4 py-4 text-sm font-medium text-amber-200 transition-colors hover:border-amber-500/40 hover:bg-slate-800/80"
+            >
+              Clear
+            </button>
+          )}
         </motion.div>
       </div>
 
-      {/* Poetry Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPoems.map((poem, i) => (
-            <motion.div
-              key={poem.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              whileHover={{ y: -5 }}
-              className="group relative cursor-pointer"
-              onClick={() => setSelectedPoem(poem)}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative p-6 rounded-2xl bg-slate-900/50 backdrop-blur-xl border border-amber-500/10 hover:border-amber-500/30 transition-all h-full">
-                <div className="flex items-start justify-between mb-4">
-                  <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {loading ? (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }, (_, index) => (
+              <LoadingCard key={index} />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="rounded-3xl border border-amber-500/20 bg-slate-900/60 p-10 text-center backdrop-blur-xl">
+            <p className="text-lg text-amber-200">{error}</p>
+          </div>
+        ) : filteredPoems.length === 0 ? (
+          <div className="rounded-3xl border border-amber-500/20 bg-slate-900/60 p-12 text-center backdrop-blur-xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-400">
+              <Sparkles className="h-8 w-8" />
+            </div>
+            <h2 className="mt-6 text-2xl font-semibold text-amber-400">No poetry found</h2>
+            <p className="mt-3 text-amber-200/70">
+              Try a different search term or reset the filters to explore the collection.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {filteredPoems.map((poem, index) => (
+              <motion.article
+                key={poem.id}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -6, scale: 1.01 }}
+                className="group overflow-hidden rounded-[1.75rem] border border-amber-500/10 bg-slate-900/60 backdrop-blur-xl"
+              >
+                <div className="relative h-48 overflow-hidden">
+                  {poem.cover_image ? (
+                    <img
+                      src={poem.cover_image}
+                      alt={poem.title}
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-500/10 to-slate-800/80 text-amber-400/60">
+                      <ImageOff className="h-8 w-8" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+                  <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full border border-amber-500/20 bg-slate-950/70 px-3 py-1 text-xs font-medium text-amber-300">
+                    <Sparkles className="h-3.5 w-3.5" />
                     {poem.category}
-                  </span>
-                  <div className="flex items-center gap-1 text-amber-400/60">
-                    <Heart className="w-4 h-4" />
-                    <span className="text-sm">{poem.likes}</span>
                   </div>
                 </div>
-                <h3 className="text-xl font-bold text-amber-400 mb-3" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
-                  {poem.title}
-                </h3>
-                <p className="text-amber-200/80 leading-relaxed line-clamp-4" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
-                  {poem.urduText}
-                </p>
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-amber-500/10">
-                  <span className="text-amber-100/40 text-sm">{poem.date}</span>
-                  <button className="text-amber-400 hover:text-amber-300 text-sm flex items-center gap-1">
-                    Read More <Share2 className="w-4 h-4" />
+
+                <div className="p-6">
+                  <div className="flex items-center justify-between gap-3">
+                    {poem.featured ? (
+                      <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Featured
+                      </span>
+                    ) : (
+                      <span className="text-sm text-amber-200/50">Standard</span>
+                    )}
+                    <div className="flex items-center gap-1 text-amber-400/70">
+                      <Heart className="h-4 w-4" />
+                      <span className="text-sm">{poem.likes}</span>
+                    </div>
+                  </div>
+
+                  <h3
+                    className="mt-5 text-xl font-semibold text-amber-400"
+                    style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+                  >
+                    {poem.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-amber-200/70">By {poem.author}</p>
+
+                  <p
+                    className="mt-4 line-clamp-4 text-sm leading-7 text-amber-100/80"
+                    style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+                  >
+                    {poem.content}
+                  </p>
+
+                  <div className="mt-6 flex items-center justify-between border-t border-amber-500/10 pt-4 text-sm text-amber-200/60">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="h-4 w-4" />
+                      {formatDate(poem.created_at)}
+                    </div>
+                    <div className="flex items-center gap-2 text-amber-400/80">
+                      <Eye className="h-4 w-4" />
+                      {poem.views}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleReadMore(poem)}
+                    className="mt-6 inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-300 transition-colors hover:border-amber-500/40 hover:bg-amber-500/20"
+                  >
+                    Read More
+                    <ArrowLeft className="h-4 w-4 rotate-180" />
                   </button>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {filteredPoems.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-amber-200/60 text-lg" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
-              کوئی شاعری نہیں ملی
-            </p>
+              </motion.article>
+            ))}
           </div>
         )}
       </div>
-
-      {/* Poem Modal */}
-      {selectedPoem && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl"
-          onClick={() => setSelectedPoem(null)}
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-amber-500/20 shadow-2xl"
-          >
-            <button
-              onClick={() => setSelectedPoem(null)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="mb-6">
-              <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
-                {selectedPoem.category}
-              </span>
-            </div>
-
-            <h2 className="text-3xl font-bold text-amber-400 mb-6" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
-              {selectedPoem.title}
-            </h2>
-
-            <div className="p-6 rounded-xl bg-amber-500/5 border border-amber-500/10 mb-6">
-              <p className="text-2xl text-amber-200 leading-loose text-center whitespace-pre-line" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
-                {selectedPoem.urduText}
-              </p>
-            </div>
-
-            <p className="text-amber-100/60 italic text-center leading-relaxed mb-8">
-              {selectedPoem.englishTranslation}
-            </p>
-
-            <div className="flex items-center justify-between pt-6 border-t border-amber-500/10">
-              <span className="text-amber-100/40 text-sm">{selectedPoem.date}</span>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => shareToFacebook(selectedPoem)}
-                  className="p-2 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-colors"
-                >
-                  <Facebook className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => shareToWhatsApp(selectedPoem)}
-                  className="p-2 rounded-lg bg-green-600/20 text-green-400 hover:bg-green-600/30 transition-colors"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => shareToTelegram(selectedPoem)}
-                  className="p-2 rounded-lg bg-sky-600/20 text-sky-400 hover:bg-sky-600/30 transition-colors"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
     </div>
   );
 }

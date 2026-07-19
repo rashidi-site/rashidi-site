@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, Facebook, Twitter, Instagram, Youtube, Clock } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -9,11 +10,32 @@ export default function Contact() {
     subject: '',
     message: '',
   });
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    alert('Thank you for your message! We will get back to you soon.');
+    const payload = Object.fromEntries(
+      Object.entries(formData).map(([key, value]) => [key, value.trim()]),
+    ) as typeof formData;
+
+    if (!payload.name || !payload.subject || !payload.message || !/^\S+@\S+\.\S+$/.test(payload.email)) {
+      setStatus('error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatus('idle');
+    const { error } = await supabase.from('messages').insert(payload);
+    setIsSubmitting(false);
+
+    if (error) {
+      setStatus('error');
+      return;
+    }
+
     setFormData({ name: '', email: '', subject: '', message: '' });
+    setStatus('success');
   };
 
   return (
@@ -110,12 +132,15 @@ export default function Contact() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   type="submit"
+                  disabled={isSubmitting}
                   className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-bold flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30"
                   style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
                 >
-                  پیغام بھیجیں
+                  {isSubmitting ? 'Sending…' : 'پیغام بھیجیں'}
                   <Send className="w-5 h-5" />
                 </motion.button>
+                {status === 'success' && <p role="status" className="text-sm text-emerald-400">Your message has been sent successfully.</p>}
+                {status === 'error' && <p role="alert" className="text-sm text-red-400">Please provide valid details and try again.</p>}
               </form>
             </div>
           </motion.div>

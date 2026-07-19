@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, Eye, Search, Pen, LogOut, Upload } from 'lucide-react';
+import { Edit, Trash2, Eye, Search, Pen, LogOut, Upload } from 'lucide-react';
 import { galleryImages, galleryCategories } from '../../data/gallery';
 
 export default function AdminGallery() {
