@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-
 import { supabase } from '../../lib/supabase';import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Eye, Search, Pen, LogOut } from 'lucide-react';
