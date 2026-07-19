@@ -45,5 +45,9 @@ export interface PoetryFormData {
 
   featured: boolean;
 
+  likes?: number;
+
+  views?: number;
+
   status: "draft" | "published";
 }

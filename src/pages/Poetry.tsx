@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CalendarDays, Eye, Filter, Heart, ImageOff, Search, Sparkles } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getPoetryBySlug, getPublishedPoetry } from '../services/poetryService';
+import { getPoetryBySlug, getPublishedPoetry, updatePoetry } from '../services/poetryService';
 import type { Poetry } from '../types/poetry';
 
 function formatDate(value: string): string {
@@ -42,6 +42,8 @@ export default function Poetry() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [likingId, setLikingId] = useState<string | null>(null);
+  const [activeDetailSlug, setActiveDetailSlug] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -140,8 +142,52 @@ export default function Poetry() {
     });
   }, [poems, searchQuery, selectedCategory]);
 
+  useEffect(() => {
+    if (!slug || !selectedPoem || slug === activeDetailSlug) {
+      return;
+    }
+
+    const incrementViews = async () => {
+      try {
+        const nextViews = selectedPoem.views + 1;
+        await updatePoetry(selectedPoem.id, { views: nextViews });
+        setPoems((currentPoems) =>
+          currentPoems.map((poem) => (poem.id === selectedPoem.id ? { ...poem, views: nextViews } : poem)),
+        );
+        setSelectedPoem((currentPoem) => (currentPoem ? { ...currentPoem, views: nextViews } : currentPoem));
+      } catch (viewError) {
+        console.error(viewError);
+      } finally {
+        setActiveDetailSlug(slug);
+      }
+    };
+
+    void incrementViews();
+  }, [activeDetailSlug, selectedPoem, slug]);
+
   const handleReadMore = (poem: Poetry) => {
     navigate(`/poetry/${poem.slug}`);
+  };
+
+  const handleLike = async (poem: Poetry) => {
+    if (likingId === poem.id) {
+      return;
+    }
+
+    setLikingId(poem.id);
+
+    try {
+      const nextLikes = poem.likes + 1;
+      await updatePoetry(poem.id, { likes: nextLikes });
+      setPoems((currentPoems) =>
+        currentPoems.map((currentPoem) => (currentPoem.id === poem.id ? { ...currentPoem, likes: nextLikes } : currentPoem)),
+      );
+      setSelectedPoem((currentPoem) => (currentPoem && currentPoem.id === poem.id ? { ...currentPoem, likes: nextLikes } : currentPoem));
+    } catch (likeError) {
+      console.error(likeError);
+    } finally {
+      setLikingId(null);
+    }
   };
 
   const clearFilters = () => {
@@ -392,10 +438,20 @@ export default function Poetry() {
                     ) : (
                       <span className="text-sm text-amber-200/50">Standard</span>
                     )}
-                    <div className="flex items-center gap-1 text-amber-400/70">
-                      <Heart className="h-4 w-4" />
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        void handleLike(poem);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-amber-500/10 bg-slate-950/50 px-2.5 py-1 text-amber-400/70 transition-colors hover:border-amber-500/30 hover:text-amber-300"
+                      aria-label={`Like ${poem.title}`}
+                      disabled={likingId === poem.id}
+                    >
+                      <Heart className={`h-4 w-4 ${likingId === poem.id ? 'animate-pulse' : ''}`} />
                       <span className="text-sm">{poem.likes}</span>
-                    </div>
+                    </button>
                   </div>
 
                   <h3

@@ -24,32 +24,29 @@ export default function AdminPoetry() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [poemToDelete, setPoemToDelete] = useState<Poetry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  const loadCategories = async (): Promise<string[]> => {
-   const { data, error } = await supabase
-    .from("poetry_categories")
-    .select("name")
-    .order("name");
-
-   if (error) throw error;
-
-   return (data ?? []).map((item) => item.name);
-  };
+  const getCategoryOptions = (poetryItems: Poetry[]): string[] =>
+    Array.from(
+      new Set(
+        poetryItems
+          .map((poem) => poem.category)
+          .filter((category): category is string => Boolean(category)),
+      ),
+    ).sort((firstCategory, secondCategory) => firstCategory.localeCompare(secondCategory));
 
   const refreshPoetry = useCallback(async () => {
     setLoading(true);
+    setFeedback(null);
 
     try {
-      const [poetryData, categoriesData] = await Promise.all([
-        getAllPoetry(),
-        loadCategories(),
-      ]);
+      const poetryData = await getAllPoetry();
 
       setPoems(poetryData);
-      setCategories(categoriesData);
+      setCategories(getCategoryOptions(poetryData));
     } catch (error) {
       console.error("Unable to load poetry data.", error);
-      alert("Failed to load poetry.");
+      setFeedback({ type: "error", message: "Failed to load poetry." });
     } finally {
       setLoading(false);
     }
@@ -138,6 +135,7 @@ export default function AdminPoetry() {
   const handleFormSuccess = async () => {
     setIsFormOpen(false);
     setEditingPoem(null);
+    setFeedback({ type: "success", message: "Poetry saved successfully." });
     await refreshPoetry();
   };
 
@@ -157,10 +155,11 @@ export default function AdminPoetry() {
       await deletePoetry(poemToDelete.id);
       setIsDeleteModalOpen(false);
       setPoemToDelete(null);
+      setFeedback({ type: "success", message: "Poetry deleted successfully." });
       await refreshPoetry();
     } catch (error) {
       console.error("Unable to delete poetry.", error);
-      alert("Failed to delete poetry.");
+      setFeedback({ type: "error", message: "Failed to delete poetry." });
     } finally {
       setIsDeleting(false);
     }
@@ -207,6 +206,18 @@ export default function AdminPoetry() {
             </motion.button>
           </div>
         </header>
+
+        {feedback && (
+          <div
+            className={`rounded-2xl border px-4 py-3 text-sm ${
+              feedback.type === "success"
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                : "border-red-500/20 bg-red-500/10 text-red-300"
+            }`}
+          >
+            {feedback.message}
+          </div>
+        )}
 
         <PoetryFilters
           searchQuery={searchQuery}
