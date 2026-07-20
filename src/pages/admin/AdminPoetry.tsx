@@ -7,7 +7,7 @@ import PoetryTable from "../../components/poetry/PoetryTable";
 import PoetryForm from "../../components/poetry/PoetryForm";
 import DeletePoetryModal from "../../components/poetry/DeletePoetryModal";
 import { supabase } from "../../lib/supabase";
-import { deletePoetry, getAllPoetry } from "../../services/poetryService";
+import { deletePoetry, getAllPoetry, getPoetryCategories } from "../../services/poetryService";
 import type { Poetry } from "../../types/poetry";
 
 export default function AdminPoetry() {
@@ -26,24 +26,18 @@ export default function AdminPoetry() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  const getCategoryOptions = (poetryItems: Poetry[]): string[] =>
-    Array.from(
-      new Set(
-        poetryItems
-          .map((poem) => poem.category)
-          .filter((category): category is string => Boolean(category)),
-      ),
-    ).sort((firstCategory, secondCategory) => firstCategory.localeCompare(secondCategory));
-
   const refreshPoetry = useCallback(async () => {
     setLoading(true);
     setFeedback(null);
 
     try {
-      const poetryData = await getAllPoetry();
+      const [poetryData, categoryData] = await Promise.all([
+        getAllPoetry(),
+        getPoetryCategories(),
+      ]);
 
       setPoems(poetryData);
-      setCategories(getCategoryOptions(poetryData));
+      setCategories(categoryData);
     } catch (error) {
       console.error("Unable to load poetry data.", error);
       setFeedback({ type: "error", message: "Failed to load poetry." });

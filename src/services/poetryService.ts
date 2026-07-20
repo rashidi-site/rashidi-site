@@ -16,6 +16,22 @@ export async function getAllPoetry(): Promise<Poetry[]> {
 }
 
 // ===============================
+// Get Poetry Categories
+// ===============================
+export async function getPoetryCategories(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("poetry_categories")
+    .select("name")
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? [])
+    .map((item) => (item as { name?: string | null }).name)
+    .filter((name): name is string => Boolean(name));
+}
+
+// ===============================
 // Published Poetry
 // ===============================
 export async function getPublishedPoetry(): Promise<Poetry[]> {
@@ -67,9 +83,15 @@ export async function getPoetryBySlug(slug: string): Promise<Poetry | null> {
 export async function createPoetry(
   poem: PoetryFormData
 ): Promise<boolean> {
+  const payload = {
+    ...poem,
+    likes: poem.likes ?? 0,
+    views: poem.views ?? 0,
+  };
+
   const { error } = await supabase
     .from("poetry")
-    .insert([poem]);
+    .insert([payload]);
 
   if (error) throw error;
 
@@ -83,9 +105,14 @@ export async function updatePoetry(
   id: string,
   poem: Partial<PoetryFormData>
 ): Promise<boolean> {
+  const payload = {
+    ...poem,
+    updated_at: new Date().toISOString(),
+  };
+
   const { error } = await supabase
     .from("poetry")
-    .update(poem)
+    .update(payload)
     .eq("id", id);
 
   if (error) throw error;
@@ -141,27 +168,24 @@ export async function uploadPoetryImage(
   const filePath = `covers/${fileName}`;
 
   const { error } = await supabase.storage
-  .from("poetry-images")
-  .upload(filePath, file, {
-    cacheControl: "3600",
-    upsert: false,
-  });
+    .from("poetry-images")
+    .upload(filePath, file, {
+      cacheControl: "3600",
+      upsert: true,
+    });
 
-if (error) {
-  console.error("UPLOAD ERROR:", error);
-
-  alert(JSON.stringify(error, null, 2));
-
-  throw error;
-}
+  if (error) {
+    console.error("UPLOAD ERROR:", error);
+    throw error;
+  }
 
   const { data } = supabase.storage
-  .from("poetry-images")
-  .getPublicUrl(filePath);
+    .from("poetry-images")
+    .getPublicUrl(filePath);
 
-if (!data.publicUrl) {
-  throw new Error("Failed to generate public image URL.");
-}
+  if (!data.publicUrl) {
+    throw new Error("Failed to generate public image URL.");
+  }
 
-return data.publicUrl;
+  return data.publicUrl;
 }
