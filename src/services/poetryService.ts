@@ -147,7 +147,13 @@ export async function uploadPoetryImage(
     upsert: false,
   });
 
-  if (error) throw error;
+if (error) {
+  console.error("UPLOAD ERROR:", error);
+
+  alert(JSON.stringify(error, null, 2));
+
+  throw error;
+}
 
   const { data } = supabase.storage
   .from("poetry-images")

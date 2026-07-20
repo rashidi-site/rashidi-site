@@ -165,53 +165,57 @@ if (fileInputRef.current) {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitError("");
-if (!validate()) {
-  return;
-}
-
-setIsSubmitting(true);
-
-try {
-  let coverImageUrl = formData.cover_image;
-
-  if (selectedImage) {
-    coverImageUrl = await uploadPoetryImage(selectedImage);
-  }
-
-  const payload: PoetryFormData = {
-    ...formData,
-    title: formData.title.trim(),
-    content: formData.content.trim(),
-    author: formData.author.trim(),
-    english_translation: formData.english_translation.trim(),
-    slug: formData.slug.trim() || slugify(formData.title),
-    cover_image: coverImageUrl,
-  };
-
-  if (poetry) {
-    await updatePoetry(poetry.id, payload);
-  } else {
-    await createPoetry(payload);
-    setFormData({ ...initialFormData });
-    setSelectedImage(null);
-    setPreviewUrl("");
-    setIsSlugManuallyEdited(false);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (!validate()) {
+      return;
     }
-  }
 
-  onSuccess();
-} catch (error: unknown) {
-  setSubmitError(
-    error instanceof Error
-      ? error.message
-      : "Unable to save poetry. Please try again.",
-  );
-} finally {
-  setIsSubmitting(false);
-}
+    setIsSubmitting(true);
+
+    try {
+      let coverImageUrl = formData.cover_image;
+
+      if (selectedImage) {
+        coverImageUrl = await uploadPoetryImage(selectedImage);
+      }
+
+      const payload: PoetryFormData = {
+        ...formData,
+        title: formData.title.trim(),
+        content: formData.content.trim(),
+        author: formData.author.trim(),
+        english_translation: formData.english_translation.trim(),
+        slug: formData.slug.trim() || slugify(formData.title),
+        cover_image: coverImageUrl,
+      };
+
+      if (poetry) {
+        await updatePoetry(poetry.id, payload);
+      } else {
+        await createPoetry(payload);
+        setFormData({ ...initialFormData });
+        setSelectedImage(null);
+        setPreviewUrl("");
+        setIsSlugManuallyEdited(false);
+
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+
+      onSuccess();
+    } catch (error) {
+      console.error("FULL ERROR:", error);
+
+      alert(JSON.stringify(error, null, 2));
+
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Unable to save poetry."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   return (
     <form

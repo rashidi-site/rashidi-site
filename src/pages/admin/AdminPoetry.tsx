@@ -158,6 +158,8 @@ export default function AdminPoetry() {
       setFeedback({ type: "success", message: "Poetry deleted successfully." });
       await refreshPoetry();
     } catch (error) {
+      console.error("FULL ERROR:", error);
+      alert(JSON.stringify(error));
       console.error("Unable to delete poetry.", error);
       setFeedback({ type: "error", message: "Failed to delete poetry." });
     } finally {
