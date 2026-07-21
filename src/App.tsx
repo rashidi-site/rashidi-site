@@ -19,6 +19,7 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminPoetry = lazy(() => import('./pages/admin/AdminPoetry'));
+const AdminQuotes = lazy(() => import('./pages/admin/AdminQuotes'));
 const AdminGallery = lazy(() => import('./pages/admin/AdminGallery'));
 const AdminBlog = lazy(() => import('./pages/admin/AdminBlog'));
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
@@ -99,6 +100,15 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <AdminPoetry />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/admin/quotes"
+                element={
+                  <ProtectedRoute>
+                    <AdminQuotes />
                   </ProtectedRoute>
                 }
               />

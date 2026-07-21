@@ -1,48 +1,42 @@
-﻿import { motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pen, Plus, LogOut, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import PoetryFilters, { type PoetryFeaturedFilter, type PoetryStatusFilter } from "../../components/poetry/PoetryFilters";
-import PoetryTable from "../../components/poetry/PoetryTable";
-import PoetryForm from "../../components/poetry/PoetryForm";
-import DeletePoetryModal from "../../components/poetry/DeletePoetryModal";
+import QuoteFilters, { type QuoteFeaturedFilter, type QuoteStatusFilter } from "../../components/quotes/QuoteFilters";
+import QuoteTable from "../../components/quotes/QuoteTable";
+import QuoteForm from "../../components/quotes/QuoteForm";
+import DeleteQuoteModal from "../../components/quotes/DeleteQuoteModal";
 import { supabase } from "../../lib/supabase";
-import { deletePoetry, getAllPoetry, getPoetryCategories } from "../../services/poetryService";
-import type { Poetry } from "../../types/poetry";
+import { deleteQuote, getAllQuotes, getQuoteCategories } from "../../services/quoteService";
+import type { Quote } from "../../types/quotes";
 
-export default function AdminPoetry() {
+export default function AdminQuotes() {
   const navigate = useNavigate();
-  const [poems, setPoems] = useState<Poetry[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<PoetryStatusFilter>("");
-  const [selectedFeatured, setSelectedFeatured] = useState<PoetryFeaturedFilter>("all");
+  const [selectedStatus, setSelectedStatus] = useState<QuoteStatusFilter>("");
+  const [selectedFeatured, setSelectedFeatured] = useState<QuoteFeaturedFilter>("all");
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingPoem, setEditingPoem] = useState<Poetry | null>(null);
+  const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [poemToDelete, setPoemToDelete] = useState<Poetry | null>(null);
+  const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  const refreshPoetry = useCallback(async () => {
+  const refreshQuotes = useCallback(async () => {
     setLoading(true);
     setFeedback(null);
 
     try {
-      const [poetryData, categoryData] = await Promise.all([
-       getAllPoetry(),
-       getPoetryCategories(),
-     ]);
-
-console.log("Categories:", categoryData);
-
-      setPoems(poetryData);
+      const [quotesData, categoryData] = await Promise.all([getAllQuotes(), getQuoteCategories()]);
+      setQuotes(quotesData);
       setCategories(categoryData);
     } catch (error) {
-      console.error("Unable to load poetry data.", error);
-      setFeedback({ type: "error", message: "Failed to load poetry." });
+      console.error("Unable to load quotes data.", error);
+      setFeedback({ type: "error", message: "Failed to load quotes." });
     } finally {
       setLoading(false);
     }
@@ -53,8 +47,8 @@ console.log("Categories:", categoryData);
 
     const verifySession = async () => {
       const {
-       data: { session },
-       } = await supabase.auth.getSession();
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (!session) {
         navigate("/admin");
@@ -65,7 +59,7 @@ console.log("Categories:", categoryData);
         return;
       }
 
-      await refreshPoetry();
+      await refreshQuotes();
     };
 
     void verifySession();
@@ -73,91 +67,76 @@ console.log("Categories:", categoryData);
     return () => {
       isActive = false;
     };
-  }, [navigate, refreshPoetry]);
+  }, [navigate, refreshQuotes]);
 
-  const filteredPoems = useMemo(() => {
+  const filteredQuotes = useMemo(() => {
     const loweredQuery = searchQuery.trim().toLowerCase();
 
-    return poems.filter((poem) => {
+    return quotes.filter((quote) => {
       const matchesQuery =
         loweredQuery.length === 0 ||
-        [poem.title, poem.author, poem.category, poem.content]
+        [quote.quote, quote.author, quote.category, quote.source ?? ""]
           .join(" ")
           .toLowerCase()
           .includes(loweredQuery);
 
-      const matchesCategory =
-        selectedCategory.length === 0 || poem.category === selectedCategory;
-
-      const matchesStatus =
-        selectedStatus.length === 0 || poem.status === selectedStatus;
-
+      const matchesCategory = selectedCategory.length === 0 || quote.category === selectedCategory;
+      const matchesStatus = selectedStatus.length === 0 || quote.status === selectedStatus;
       const matchesFeatured =
-        selectedFeatured === "all" ||
-        (selectedFeatured === "featured" ? poem.featured : !poem.featured);
+        selectedFeatured === "all" || (selectedFeatured === "featured" ? quote.featured : !quote.featured);
 
-      return (
-        matchesQuery &&
-        matchesCategory &&
-        matchesStatus &&
-        matchesFeatured
-      );
+      return matchesQuery && matchesCategory && matchesStatus && matchesFeatured;
     });
-  }, [poems, searchQuery, selectedCategory, selectedStatus, selectedFeatured]);
+  }, [quotes, searchQuery, selectedCategory, selectedStatus, selectedFeatured]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-
-    navigate("/admin", {
-    replace: true,
-   });
+    navigate("/admin", { replace: true });
   };
 
   const handleCreate = () => {
-    setEditingPoem(null);
+    setEditingQuote(null);
     setIsFormOpen(true);
   };
 
-  const handleEdit = (poem: Poetry) => {
-    setEditingPoem(poem);
+  const handleEdit = (quote: Quote) => {
+    setEditingQuote(quote);
     setIsFormOpen(true);
   };
 
-  const handleDelete = (poem: Poetry) => {
-    setPoemToDelete(poem);
+  const handleDelete = (quote: Quote) => {
+    setQuoteToDelete(quote);
     setIsDeleteModalOpen(true);
   };
 
   const handleFormSuccess = async () => {
     setIsFormOpen(false);
-    setEditingPoem(null);
-    setFeedback({ type: "success", message: "Poetry saved successfully." });
-    await refreshPoetry();
+    setEditingQuote(null);
+    setFeedback({ type: "success", message: "Quote saved successfully." });
+    await refreshQuotes();
   };
 
   const handleFormCancel = () => {
     setIsFormOpen(false);
-    setEditingPoem(null);
+    setEditingQuote(null);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!poemToDelete) {
+    if (!quoteToDelete) {
       return;
     }
 
     setIsDeleting(true);
 
     try {
-      await deletePoetry(poemToDelete.id);
+      await deleteQuote(quoteToDelete.id);
       setIsDeleteModalOpen(false);
-      setPoemToDelete(null);
-      setFeedback({ type: "success", message: "Poetry deleted successfully." });
-      await refreshPoetry();
+      setQuoteToDelete(null);
+      setFeedback({ type: "success", message: "Quote deleted successfully." });
+      await refreshQuotes();
     } catch (error) {
-      console.error("FULL ERROR:", error);
-      alert(JSON.stringify(error));
-      console.error("Unable to delete poetry.", error);
-      setFeedback({ type: "error", message: "Failed to delete poetry." });
+      console.error("Unable to delete quote.", error);
+      setFeedback({ type: "error", message: "Failed to delete quote." });
     } finally {
       setIsDeleting(false);
     }
@@ -172,13 +151,10 @@ console.log("Categories:", categoryData);
               <Pen className="h-7 w-7 text-slate-950" />
             </div>
             <div>
-              <h1
-                className="text-2xl font-bold text-amber-400"
-                style={{ fontFamily: "Noto Nastaliq Urdu, serif" }}
-              >
-                شاعری انتظام
+              <h1 className="text-2xl font-bold text-amber-400" style={{ fontFamily: "Noto Nastaliq Urdu, serif" }}>
+                اقتباس انتظام
               </h1>
-              <p className="text-sm text-amber-200/60">Manage poetry entries</p>
+              <p className="text-sm text-amber-200/60">Manage Islamic quotes</p>
             </div>
           </div>
 
@@ -190,7 +166,7 @@ console.log("Categories:", categoryData);
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-2.5 font-semibold text-slate-950 shadow-lg shadow-amber-500/30"
             >
               <Plus className="h-5 w-5" />
-              Add Poetry
+              Add Quote
             </motion.button>
 
             <motion.button
@@ -206,18 +182,12 @@ console.log("Categories:", categoryData);
         </header>
 
         {feedback && (
-          <div
-            className={`rounded-2xl border px-4 py-3 text-sm ${
-              feedback.type === "success"
-                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-                : "border-red-500/20 bg-red-500/10 text-red-300"
-            }`}
-          >
+          <div className={`rounded-2xl border px-4 py-3 text-sm ${feedback.type === "success" ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : "border-red-500/20 bg-red-500/10 text-red-300"}`}>
             {feedback.message}
           </div>
         )}
 
-        <PoetryFilters
+        <QuoteFilters
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           selectedCategory={selectedCategory}
@@ -229,12 +199,7 @@ console.log("Categories:", categoryData);
           categories={categories}
         />
 
-        <PoetryTable
-          poems={filteredPoems}
-          loading={loading}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+        <QuoteTable quotes={filteredQuotes} loading={loading} onEdit={handleEdit} onDelete={handleDelete} />
       </div>
 
       {isFormOpen && (
@@ -247,49 +212,33 @@ console.log("Categories:", categoryData);
           >
             <div className="flex items-center justify-between border-b border-amber-500/10 px-6 py-4">
               <div>
-                <h2 className="text-xl font-semibold text-amber-400">
-                  {editingPoem ? "Edit poetry" : "Add poetry"}
-                </h2>
-                <p className="text-sm text-slate-400">
-                  {editingPoem
-                    ? "Update the poetry entry and its metadata."
-                    : "Create a new poetry entry for the website."}
-                </p>
+                <h2 className="text-xl font-semibold text-amber-400">{editingQuote ? "Edit quote" : "Add quote"}</h2>
+                <p className="text-sm text-slate-400">{editingQuote ? "Update the quote entry and its metadata." : "Create a new Islamic quote entry for the website."}</p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleFormCancel}
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
-                aria-label="Close poetry form"
-              >
+              <button type="button" onClick={handleFormCancel} className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white" aria-label="Close quote form">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <div className="max-h-[80vh] overflow-y-auto p-6 sm:p-8">
-              <PoetryForm
-                key={editingPoem?.id ?? "new"}
-                poetry={editingPoem}
-                categories={categories}
-                onSuccess={handleFormSuccess}
-                onCancel={handleFormCancel}
-              />
+              <QuoteForm key={editingQuote?.id ?? "new"} quote={editingQuote} categories={categories} onSuccess={handleFormSuccess} onCancel={handleFormCancel} />
             </div>
           </motion.div>
         </div>
       )}
 
-      <DeletePoetryModal
+      <DeleteQuoteModal
         open={isDeleteModalOpen}
-        title={poemToDelete?.title ?? "this poetry entry"}
+        title={quoteToDelete?.quote ?? "this quote entry"}
         isDeleting={isDeleting}
         onClose={() => {
           setIsDeleteModalOpen(false);
-          setPoemToDelete(null);
+          setQuoteToDelete(null);
         }}
         onDelete={handleDeleteConfirm}
       />
     </div>
   );
 }
+// Duplicate block removed — file contains single component implementation above.

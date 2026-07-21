@@ -36,6 +36,7 @@ export default function AdminDashboard() {
 
   const menuItems = [
     { path: '/admin/poetry', label: 'Poetry', labelUrdu: 'شاعری', icon: BookOpen },
+    { path: '/admin/quotes', label: 'Quotes', labelUrdu: 'اقتباسات', icon: Quote },
     { path: '/admin/gallery', label: 'Gallery', labelUrdu: 'گیلری', icon: Image },
     { path: '/admin/blog', label: 'Blog', labelUrdu: 'بلاگ', icon: FileText },
     { path: '/admin/messages', label: 'Messages', labelUrdu: 'پیغامات', icon: Mail },
@@ -105,15 +106,17 @@ const handleLogout = async () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Add Poetry', labelUrdu: 'شاعری شامل', color: 'from-amber-500 to-yellow-500' },
-            { label: 'Add Quote', labelUrdu: 'اقتباس شامل', color: 'from-yellow-500 to-orange-500' },
-            { label: 'Upload Image', labelUrdu: 'تصویر اپلوڈ', color: 'from-orange-500 to-red-500' },
-            { label: 'New Blog Post', labelUrdu: 'بلاگ پوسٹ', color: 'from-red-500 to-pink-500' },
+            { path: '/admin/poetry', label: 'Add Poetry', labelUrdu: 'شاعری شامل', color: 'from-amber-500 to-yellow-500' },
+            { path: '/admin/quotes', label: 'Add Quote', labelUrdu: 'اقتباس شامل', color: 'from-yellow-500 to-orange-500' },
+            { path: '/admin/gallery', label: 'Upload Image', labelUrdu: 'تصویر اپلوڈ', color: 'from-orange-500 to-red-500' },
+            { path: '/admin/blog', label: 'New Blog Post', labelUrdu: 'بلاگ پوسٹ', color: 'from-red-500 to-pink-500' },
           ].map((action, i) => (
             <motion.button
               key={i}
+              type="button"
               whileHover={{ scale: 1.02, y: -5 }}
               whileTap={{ scale: 0.98 }}
+              onClick={() => navigate(action.path)}
               className={`p-6 rounded-2xl bg-gradient-to-r ${action.color} text-slate-950 font-semibold flex items-center justify-center gap-3 shadow-lg`}
             >
               <Plus className="w-5 h-5" />
