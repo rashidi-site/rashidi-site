@@ -14,15 +14,15 @@ export async function getAllQuotes(): Promise<Quote[]> {
 
 export async function getQuoteCategories(): Promise<string[]> {
   const { data, error } = await supabase
-    .from("quotes")
-    .select("category")
-    .order("category", { ascending: true });
+    .from("quote_categories")
+    .select("name")
+    .order("name", { ascending: true });
 
   if (error) throw error;
 
   return (data ?? [])
-    .map((item) => (item as { category?: string | null }).category)
-    .filter((category): category is string => Boolean(category));
+    .map((item) => item.name)
+    .filter(Boolean);
 }
 
 export async function getPublishedQuotes(): Promise<Quote[]> {
