@@ -31,9 +31,13 @@ export default function AdminQuotes() {
     setFeedback(null);
 
     try {
-      const [quotesData, categoryData] = await Promise.all([getAllQuotes(), getQuoteCategories()]);
-      setQuotes(quotesData);
-      setCategories(categoryData);
+      const [quotes, categories] = await Promise.all([
+  getAllQuotes(),
+  getQuoteCategories(),
+]);
+
+setQuotes(quotes);
+setCategories(categories);
     } catch (error) {
       console.error("Unable to load quotes data.", error);
       setFeedback({ type: "error", message: "Failed to load quotes." });
