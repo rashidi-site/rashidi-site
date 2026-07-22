@@ -1,7 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ChevronDown, Heart, BookOpen, Quote, Users, ArrowRight, ChevronLeft, ChevronRight, Share2, ImageIcon, FileText, MessageSquareText } from 'lucide-react';
+import {
+  ChevronDown,
+  Heart,
+  BookOpen,
+  Quote as QuoteIcon,
+  Users,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Share2,
+  ImageIcon,
+  FileText,
+  MessageSquareText,
+} from 'lucide-react';
 import { getPublishedPoetry } from '../services/poetryService';
 import { getPublishedQuotes } from '../services/quoteService';
 import { getPublishedGallery } from '../services/galleryService';
@@ -79,7 +92,7 @@ export default function Home() {
   const counters = useMemo(
     () => [
       { label: 'Poetry', value: poetry.length, icon: BookOpen },
-      { label: 'Quotes', value: quotes.length, icon: Quote },
+      { label: 'Quotes', value: quotes.length, icon: QuoteIcon },
       { label: 'Gallery', value: gallery.length, icon: ImageIcon },
       { label: 'Blog Posts', value: blogs.length, icon: FileText },
     ],
@@ -174,7 +187,7 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             {[
               { icon: BookOpen, title: 'شاعری', titleEn: 'Poetry', desc: 'روحانی شاعری کا حسین ذخیرہ', gradient: 'from-amber-500 to-yellow-500' },
-              { icon: Quote, title: 'اقتباسات', titleEn: 'Quotes', desc: 'اسلامی اقتباسات اور احادیث', gradient: 'from-yellow-500 to-orange-500' },
+              { icon: QuoteIcon, title: 'اقتباسات', titleEn: 'Quotes', desc: 'اسلامی اقتباسات اور احادیث', gradient: 'from-yellow-500 to-orange-500' },
               { icon: Users, title: 'برادری', titleEn: 'Community', desc: 'ہزاروں قارئین کا خاندان', gradient: 'from-orange-500 to-red-500' },
             ].map((feature, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }} whileHover={{ y: -5 }} className="group relative">
@@ -209,7 +222,7 @@ export default function Home() {
       <section className="relative overflow-hidden py-24">
         <div className="absolute inset-0 bg-gradient-to-r from-amber-950/20 via-slate-900 to-amber-950/20" />
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <Quote className="mx-auto mb-8 h-16 w-16 text-amber-500/30" />
+          <QuoteIcon className="mx-auto mb-8 h-16 w-16 text-amber-500/30" />
 
           <div className="relative flex h-64 items-center justify-center">
             {quoteSlides.map((quote, i) => (
