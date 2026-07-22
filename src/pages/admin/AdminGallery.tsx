@@ -1,42 +1,79 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Edit, Trash2, Eye, Search, Pen, LogOut, Upload } from 'lucide-react';
-import { galleryImages, galleryCategories } from '../../data/gallery';
+import { deleteGalleryItem, getAllGallery } from '../../services/galleryService';
+import type { GalleryItem } from '../../types/gallery';
 
 export default function AdminGallery() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [images, setImages] = useState<GalleryItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  const checkSession = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (!session) {
-      navigate('/admin');
-    }
-  };
+      if (!session) {
+        navigate('/admin');
+      }
+    };
 
-  checkSession();
-}, [navigate]);
+    void checkSession();
+  }, [navigate]);
 
-  const filteredImages = galleryImages.filter((image) => {
-    const matchesSearch = image.title.includes(searchQuery) || image.description.includes(searchQuery);
-    const matchesCategory = !selectedCategory || image.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadImages = async () => {
+      try {
+        const data = await getAllGallery();
+        if (isMounted) {
+          setImages(data);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadImages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const categories = useMemo(() => Array.from(new Set(images.map((image) => image.category))), [images]);
+
+  const filteredImages = useMemo(() => {
+    return images.filter((image) => {
+      const matchesSearch = image.title.toLowerCase().includes(searchQuery.toLowerCase()) || image.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = !selectedCategory || image.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [images, searchQuery, selectedCategory]);
 
   const handleLogout = async () => {
-  await supabase.auth.signOut();
-  navigate('/admin');
-};
+    await supabase.auth.signOut();
+    navigate('/admin');
+  };
 
-  const handleDelete = (id: number) => {
-    alert(`Image with ID ${id} would be deleted`);
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteGalleryItem(id);
+      setImages((existingImages) => existingImages.filter((image) => image.id !== id));
+    } catch (error) {
+      console.error(error);
+    }
   };
   return (
     <div className="min-h-screen pt-24 pb-16">
@@ -95,7 +132,7 @@ export default function AdminGallery() {
             className="appearance-none w-full md:w-48 px-4 py-3 rounded-xl bg-slate-900/50 backdrop-blur border border-amber-500/20 text-white focus:outline-none focus:border-amber-500 transition-colors cursor-pointer"
           >
             <option value="">All Categories</option>
-            {galleryCategories.filter(c => c !== 'تمام').map((cat) => (
+            {categories.map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
@@ -104,41 +141,34 @@ export default function AdminGallery() {
 
       {/* Gallery Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredImages.map((image, i) => (
-            <motion.div
-              key={image.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.05 }}
-              className="group relative rounded-2xl overflow-hidden bg-slate-900/50 backdrop-blur-xl border border-amber-500/10 hover:border-amber-500/30 transition-all"
-            >
-              <img
-                src={image.src}
-                alt={image.title}
-                className="w-full aspect-square object-cover"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="absolute bottom-0 left-0 right-0 p-4">
-                  <h3 className="text-amber-400 font-semibold text-sm" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>{image.title}</h3>
-                  <p className="text-amber-200/60 text-xs">{image.category}</p>
+        {loading ? (
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 8 }, (_, index) => (
+              <div key={index} className="aspect-square animate-pulse rounded-2xl border border-amber-500/10 bg-slate-900/50" />
+            ))}
+          </div>
+        ) : filteredImages.length === 0 ? (
+          <div className="rounded-3xl border border-amber-500/20 bg-slate-900/60 p-10 text-center text-amber-200/70">No images found.</div>
+        ) : (
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
+            {filteredImages.map((image, index) => (
+              <motion.div key={image.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.05 }} className="group relative overflow-hidden rounded-2xl border border-amber-500/10 bg-slate-900/50 backdrop-blur-xl transition-all hover:border-amber-500/30">
+                <img src={image.src} alt={image.title} className="aspect-square w-full object-cover" loading="lazy" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <h3 className="text-sm font-semibold text-amber-400" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>{image.title}</h3>
+                    <p className="text-xs text-amber-200/60">{image.category}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors">
-                  <Eye className="w-4 h-4" />
-                </button>
-                <button className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors">
-                  <Edit className="w-4 h-4" />
-                </button>
-                <button onClick={() => handleDelete(image.id)} className="p-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button className="rounded-lg bg-amber-500/20 p-1.5 text-amber-400 transition-colors hover:bg-amber-500/30"><Eye className="h-4 w-4" /></button>
+                  <button className="rounded-lg bg-blue-500/20 p-1.5 text-blue-400 transition-colors hover:bg-blue-500/30"><Edit className="h-4 w-4" /></button>
+                  <button onClick={() => void handleDelete(image.id)} className="rounded-lg bg-red-500/20 p-1.5 text-red-400 transition-colors hover:bg-red-500/30"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

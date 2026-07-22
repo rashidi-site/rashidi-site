@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, Facebook, Twitter, Instagram, Youtube, Clock } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { createMessage } from '../services/messageService';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -26,16 +26,17 @@ export default function Contact() {
 
     setIsSubmitting(true);
     setStatus('idle');
-    const { error } = await supabase.from('messages').insert(payload);
-    setIsSubmitting(false);
 
-    if (error) {
+    try {
+      await createMessage(payload);
+      setFormData({ name: '', email: '', subject: '', message: '' });
+      setStatus('success');
+    } catch (error) {
+      console.error(error);
       setStatus('error');
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setFormData({ name: '', email: '', subject: '', message: '' });
-    setStatus('success');
   };
 
   return (

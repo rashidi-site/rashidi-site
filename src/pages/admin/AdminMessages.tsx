@@ -1,47 +1,91 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Pen, LogOut, Mail, User, Calendar, Trash2, Reply } from 'lucide-react';
-
-interface Message {
-  id: number;
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-  date: string;
-  read: boolean;
-}
-
-const messages: Message[] = [
-  { id: 1, name: 'احمد علی', email: 'ahmad@example.com', subject: 'شاعری کی تعریف', message: 'آپ کی شاعری بہت خوبصورت ہے۔ اللہ آپ کو مزید عطا فرمائے۔', date: '2024-03-15', read: false },
-  { id: 2, name: 'فاطمہ زہرا', email: 'fatima@example.com', subject: 'رمضان کی فضیلت', message: 'رمضان کے بارے میں آپ کی تحریر بہت معلوماتی ہے۔', date: '2024-03-14', read: true },
-  { id: 3, name: 'محمد عمر', email: 'umar@example.com', subject: 'سوال', message: 'کیا آپ کی کتابیں دستیاب ہیں؟', date: '2024-03-13', read: false },
-  { id: 4, name: 'عبداللہ', email: 'abdullah@example.com', subject: 'دعائے مغفرت', message: 'دعائے مغفرت کی شاعری بہت روحانی ہے۔', date: '2024-03-12', read: true },
-  { id: 5, name: 'زینب', email: 'zainab@example.com', subject: 'گیلری', message: 'گیلری میں تصاویر بہت حسین ہیں۔', date: '2024-03-11', read: false },
-];
+import { deleteMessage, getMessages, markMessageAsRead } from '../../services/messageService';
+import type { MessageItem } from '../../services/messageService';
 
 export default function AdminMessages() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<MessageItem | null>(null);
+  const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  // ProtectedRoute already handles authentication
-}, []);
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        navigate('/admin');
+      }
+    };
+
+    void checkSession();
+  }, [navigate]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadMessages = async () => {
+      try {
+        const data = await getMessages();
+        if (isMounted) {
+          setMessages(data);
+          if (data[0]) {
+            setSelectedMessage(data[0]);
+          }
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadMessages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredMessages = messages.filter((msg) => {
-    return msg.name.includes(searchQuery) || msg.subject.includes(searchQuery) || msg.email.includes(searchQuery);
+    return msg.name.toLowerCase().includes(searchQuery.toLowerCase()) || msg.subject.toLowerCase().includes(searchQuery.toLowerCase()) || msg.email.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const handleLogout = async () => {
-  await supabase.auth.signOut();
-  navigate('/admin');
-};
+    await supabase.auth.signOut();
+    navigate('/admin');
+  };
 
-  const handleDelete = (id: number) => {
-    alert(`Message with ID ${id} would be deleted`);
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteMessage(id);
+      setMessages((existingMessages) => existingMessages.filter((message) => message.id !== id));
+      if (selectedMessage?.id === id) {
+        setSelectedMessage(null);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleSelectMessage = async (message: MessageItem) => {
+    setSelectedMessage(message);
+    if (!message.is_read) {
+      try {
+        await markMessageAsRead(message.id);
+        setMessages((existingMessages) => existingMessages.map((item) => (item.id === message.id ? { ...item, is_read: true } : item)));
+      } catch (error) {
+        console.error(error);
+      }
+    }
   };
   return (
     <div className="min-h-screen pt-24 pb-16">
@@ -94,22 +138,18 @@ export default function AdminMessages() {
               <p className="text-amber-400 font-semibold">{filteredMessages.length} Messages</p>
             </div>
             <div className="divide-y divide-amber-500/10 max-h-[500px] overflow-y-auto">
-              {filteredMessages.map((msg, i) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.05 }}
-                  onClick={() => setSelectedMessage(msg)}
-                  className={`p-4 cursor-pointer transition-colors ${
-                    selectedMessage?.id === msg.id ? 'bg-amber-500/10' : 'hover:bg-amber-500/5'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">\n                    <span className="text-amber-400 font-semibold" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>{msg.name}</span>
-                    {!msg.read && <span className="w-2 h-2 rounded-full bg-green-500" />}
+              {loading ? (
+                <div className="p-4 text-sm text-amber-200/70">Loading messages…</div>
+              ) : filteredMessages.length === 0 ? (
+                <div className="p-4 text-sm text-amber-200/70">No messages found.</div>
+              ) : filteredMessages.map((msg, index) => (
+                <motion.div key={msg.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.05 }} onClick={() => void handleSelectMessage(msg)} className={`cursor-pointer p-4 transition-colors ${selectedMessage?.id === msg.id ? 'bg-amber-500/10' : 'hover:bg-amber-500/5'}`}>
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="font-semibold text-amber-400" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>{msg.name}</span>
+                    {!msg.is_read && <span className="h-2 w-2 rounded-full bg-green-500" />}
                   </div>
-                  <p className="text-amber-200/60 text-sm truncate" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>{msg.subject}</p>
-                  <p className="text-amber-100/40 text-xs mt-1">{msg.date}</p>
+                  <p className="truncate text-sm text-amber-200/60" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>{msg.subject}</p>
+                  <p className="mt-1 text-xs text-amber-100/40">{new Date(msg.created_at).toLocaleDateString()}</p>
                 </motion.div>
               ))}
             </div>
@@ -138,7 +178,7 @@ export default function AdminMessages() {
                     <button className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors">
                       <Reply className="w-5 h-5" />
                     </button>
-                    <button onClick={() => handleDelete(selectedMessage.id)} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
+                    <button onClick={() => void handleDelete(selectedMessage.id)} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
                       <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
@@ -147,7 +187,7 @@ export default function AdminMessages() {
                 <div className="mb-4">
                   <p className="text-amber-200/60 text-sm flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
-                    {selectedMessage.date}
+                    {new Date(selectedMessage.created_at).toLocaleDateString()}
                   </p>
                 </div>
 

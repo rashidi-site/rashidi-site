@@ -1,39 +1,72 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Eye, Search, Pen, LogOut } from 'lucide-react';
-import { blogPosts } from '../../data/blog';
+import { deleteBlogPost, getAllBlogPosts } from '../../services/blogService';
+import type { BlogPostItem } from '../../services/blogService';
 
 export default function AdminBlog() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [posts, setPosts] = useState<BlogPostItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  const checkSession = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (!session) {
-      navigate('/admin');
-    }
-  };
+      if (!session) {
+        navigate('/admin');
+      }
+    };
 
-  checkSession();
-}, [navigate]);
+    void checkSession();
+  }, [navigate]);
 
-  const filteredPosts = blogPosts.filter((post) => {
-    return post.title.includes(searchQuery) || post.excerpt.includes(searchQuery);
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPosts = async () => {
+      try {
+        const data = await getAllBlogPosts();
+        if (isMounted) {
+          setPosts(data);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadPosts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredPosts = posts.filter((post) => {
+    return post.title.toLowerCase().includes(searchQuery.toLowerCase()) || post.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const handleLogout = async () => {
-  await supabase.auth.signOut();
-  navigate('/admin');
-};
+    await supabase.auth.signOut();
+    navigate('/admin');
+  };
 
-  const handleDelete = (id: number) => {
-    alert(`Blog post with ID ${id} would be deleted`);
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteBlogPost(id);
+      setPosts((existingPosts) => existingPosts.filter((post) => post.id !== id));
+    } catch (error) {
+      console.error(error);
+    }
   };
   return (
     <div className="min-h-screen pt-24 pb-16">
@@ -101,34 +134,30 @@ export default function AdminBlog() {
               </tr>
             </thead>
             <tbody className="divide-y divide-amber-500/10">
-              {filteredPosts.map((post, i) => (
-                <motion.tr
-                  key={post.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="hover:bg-amber-500/5 transition-colors"
-                >
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-amber-200/70">Loading blog posts…</td>
+                </tr>
+              ) : filteredPosts.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-amber-200/70">No posts found.</td>
+                </tr>
+              ) : filteredPosts.map((post, index) => (
+                <motion.tr key={post.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: index * 0.05 }} className="transition-colors hover:bg-amber-500/5">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <img src={post.image} alt={post.title} className="w-10 h-10 rounded-lg object-cover" />
+                      <img src={post.cover_image ?? ''} alt={post.title} className="h-10 w-10 rounded-lg object-cover" />
                       <span className="text-amber-200" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>{post.title}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-amber-200/60">{post.category}</td>
-                  <td className="px-6 py-4 text-amber-200/60">{post.date}</td>
-                  <td className="px-6 py-4 text-amber-200/60">{post.comments.length}</td>
+                  <td className="px-6 py-4 text-amber-200/60">{new Date(post.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 text-amber-200/60">0</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="p-2 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => handleDelete(post.id)} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <button className="rounded-lg bg-amber-500/10 p-2 text-amber-400 transition-colors hover:bg-amber-500/20"><Eye className="h-4 w-4" /></button>
+                      <button className="rounded-lg bg-blue-500/10 p-2 text-blue-400 transition-colors hover:bg-blue-500/20"><Edit className="h-4 w-4" /></button>
+                      <button onClick={() => void handleDelete(post.id)} className="rounded-lg bg-red-500/10 p-2 text-red-400 transition-colors hover:bg-red-500/20"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </td>
                 </motion.tr>
