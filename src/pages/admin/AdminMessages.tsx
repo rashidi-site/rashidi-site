@@ -163,7 +163,8 @@ export default function AdminMessages() {
                 animate={{ opacity: 1 }}
               >
                 <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">\n                    <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 flex items-center justify-center">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 flex items-center justify-center">
                       <User className="w-6 h-6 text-slate-950" />
                     </div>
                     <div>

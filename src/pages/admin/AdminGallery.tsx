@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Edit, Trash2, Search, Pen, LogOut, Upload, X } from 'lucide-react';
 import { deleteGalleryItem, getAllGallery } from '../../services/galleryService';
 import GalleryForm from '../../components/gallery/GalleryForm';
+import DeleteGalleryModal from '../../components/gallery/DeleteGalleryModal';
 import type { GalleryItem } from '../../types/gallery';
 
 export default function AdminGallery() {
@@ -15,6 +16,8 @@ export default function AdminGallery() {
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GalleryItem | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<GalleryItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -79,23 +82,31 @@ export default function AdminGallery() {
   };
 
   const handleCreate = () => {
-    setEditingItem(null);
-    setIsFormOpen(true);
-  };
+  console.log("Upload button clicked");
+  setEditingItem(null);
+  setIsFormOpen(true);
+};
 
   const handleEdit = (item: GalleryItem) => {
     setEditingItem(item);
     setIsFormOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (isDeleting) return;
+  const handleDeleteRequest = (item: GalleryItem) => {
+    setItemToDelete(item);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
 
     setIsDeleting(true);
 
     try {
-      await deleteGalleryItem(id);
-      setImages((existingImages) => existingImages.filter((image) => image.id !== id));
+      await deleteGalleryItem(itemToDelete.id);
+      setIsDeleteModalOpen(false);
+      setItemToDelete(null);
+      setImages((existingImages) => existingImages.filter((image) => image.id !== itemToDelete.id));
       setFeedback({ type: 'success', message: 'Gallery item deleted successfully.' });
     } catch (error) {
       console.error(error);
@@ -241,7 +252,7 @@ export default function AdminGallery() {
                     <Edit className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => void handleDelete(image.id)}
+                    onClick={() => handleDeleteRequest(image)}
                     className="rounded-lg bg-red-500/20 p-1.5 text-red-400 transition-colors hover:bg-red-500/30"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -292,6 +303,17 @@ export default function AdminGallery() {
           </motion.div>
         </div>
       )}
+
+      <DeleteGalleryModal
+        open={isDeleteModalOpen}
+        title={itemToDelete?.title ?? "this image"}
+        isDeleting={isDeleting}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setItemToDelete(null);
+        }}
+        onDelete={handleDeleteConfirm}
+      />
     </div>
   );
 }
