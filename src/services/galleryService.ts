@@ -47,6 +47,35 @@ export async function getAllGallery(): Promise<GalleryItem[]> {
   return (data ?? []).map((item) => mapGalleryRecord(item as GalleryRecord));
 }
 
+export async function createGalleryItem(payload: {
+  title: string;
+  description: string;
+  image_url: string;
+  category: string;
+  featured: boolean;
+  status: "draft" | "published";
+}): Promise<void> {
+  const { error } = await supabase.from("gallery").insert([payload]);
+
+  if (error) throw error;
+}
+
+export async function updateGalleryItem(
+  id: string,
+  payload: Partial<{
+    title: string;
+    description: string;
+    image_url: string;
+    category: string;
+    featured: boolean;
+    status: "draft" | "published";
+  }>,
+): Promise<void> {
+  const { error } = await supabase.from("gallery").update(payload).eq("id", id);
+
+  if (error) throw error;
+}
+
 export async function deleteGalleryItem(id: string): Promise<void> {
   const { error } = await supabase.from("gallery").delete().eq("id", id);
 

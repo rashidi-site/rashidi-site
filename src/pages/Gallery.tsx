@@ -1,41 +1,84 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { galleryImages, galleryCategories } from '../data/gallery';
+import { getPublishedGallery } from '../services/galleryService';
+import type { GalleryItem } from '../types/gallery';
 
 export default function Gallery() {
-  const [selectedCategory, setSelectedCategory] = useState('تمام');
-  const [selectedImage, setSelectedImage] = useState<typeof galleryImages[0] | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [images, setImages] = useState<GalleryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredImages = selectedCategory === 'تمام'
-    ? galleryImages
-    : galleryImages.filter(img => img.category === selectedCategory);
+  useEffect(() => {
+    let isMounted = true;
 
-  const openLightbox = (image: typeof galleryImages[0], index: number) => {
+    const loadImages = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const data = await getPublishedGallery();
+        if (isMounted) {
+          setImages(data);
+        }
+      } catch (loadError) {
+        if (isMounted) {
+          setError('Unable to load the gallery right now. Please try again shortly.');
+          console.error(loadError);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadImages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.from(
+      new Set(images.map((img) => img.category).filter(Boolean)),
+    );
+    return uniqueCategories.sort();
+  }, [images]);
+
+  const filteredImages = useMemo(() => {
+    if (!selectedCategory) return images;
+    return images.filter((img) => img.category === selectedCategory);
+  }, [images, selectedCategory]);
+
+  const openLightbox = (image: GalleryItem, index: number) => {
     setSelectedImage(image);
     setCurrentIndex(index);
   };
 
   const navigateImage = (direction: 'prev' | 'next') => {
-    const newIndex = direction === 'next'
-      ? (currentIndex + 1) % filteredImages.length
-      : (currentIndex - 1 + filteredImages.length) % filteredImages.length;
+    const newIndex =
+      direction === 'next'
+        ? (currentIndex + 1) % filteredImages.length
+        : (currentIndex - 1 + filteredImages.length) % filteredImages.length;
     setCurrentIndex(newIndex);
     setSelectedImage(filteredImages[newIndex]);
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-16">
-      {/* Header */}
-      <div className="relative py-16 overflow-hidden">
+    <div className="min-h-screen pb-16 pt-24">
+      <div className="relative overflow-hidden py-16">
         <div className="absolute inset-0 bg-gradient-to-b from-amber-950/30 to-transparent" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <h1 className="text-5xl md:text-6xl font-bold mb-4" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
+        <div className="relative mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
+            <h1
+              className="mb-4 text-5xl font-bold md:text-6xl"
+              style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+            >
               <span className="bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
                 گیلری
               </span>
@@ -45,68 +88,109 @@ export default function Gallery() {
         </div>
       </div>
 
-      {/* Category Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="flex flex-wrap justify-center gap-3"
-        >
-          {galleryCategories.map((cat) => (
+      <div className="mx-auto mb-12 max-w-7xl px-4 sm:px-6 lg:px-8">
+        {loading ? (
+          <div className="flex justify-center gap-3">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="h-10 w-24 animate-pulse rounded-xl bg-slate-800/80" />
+            ))}
+          </div>
+        ) : categories.length > 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex flex-wrap justify-center gap-3"
+          >
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                selectedCategory === cat
+              onClick={() => setSelectedCategory('')}
+              className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+                !selectedCategory
                   ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950'
-                  : 'bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20'
+                  : 'border border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
               }`}
               style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
             >
-              {cat}
+              تمام
             </button>
-          ))}
-        </motion.div>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+                  selectedCategory === cat
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950'
+                    : 'border border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                }`}
+                style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+              >
+                {cat}
+              </button>
+            ))}
+          </motion.div>
+        ) : null}
       </div>
 
-      {/* Gallery Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredImages.map((image, i) => (
-            <motion.div
-              key={image.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.05 }}
-              whileHover={{ scale: 1.02 }}
-              className="group relative cursor-pointer overflow-hidden rounded-2xl aspect-square"
-              onClick={() => openLightbox(image, i)}
-            >
-              <img
-                src={image.src}
-                alt={image.title}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                loading="lazy"
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {loading ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }, (_, i) => (
+              <div
+                key={i}
+                className="aspect-square animate-pulse rounded-2xl border border-amber-500/10 bg-slate-900/50"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                <h3 className="text-amber-400 font-semibold" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
-                  {image.title}
-                </h3>
-                <p className="text-amber-200/60 text-sm" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
-                  {image.description}
-                </p>
-              </div>
-              <div className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-amber-500/20 backdrop-blur-sm text-amber-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                {image.category}
-              </div>
-            </motion.div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div className="rounded-3xl border border-amber-500/20 bg-slate-900/60 p-10 text-center text-amber-200">
+            {error}
+          </div>
+        ) : filteredImages.length === 0 ? (
+          <div className="rounded-3xl border border-amber-500/20 bg-slate-900/60 p-12 text-center text-amber-200/70">
+            No gallery images are available right now.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredImages.map((image, i) => (
+              <motion.div
+                key={image.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.05 }}
+                whileHover={{ scale: 1.02 }}
+                className="group relative aspect-square cursor-pointer overflow-hidden rounded-2xl"
+                onClick={() => openLightbox(image, i)}
+              >
+                <img
+                  src={image.src}
+                  alt={image.title}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="absolute bottom-0 left-0 right-0 translate-y-full p-4 transition-transform duration-300 group-hover:translate-y-0">
+                  <h3
+                    className="font-semibold text-amber-400"
+                    style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+                  >
+                    {image.title}
+                  </h3>
+                  <p
+                    className="text-sm text-amber-200/60"
+                    style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+                  >
+                    {image.description}
+                  </p>
+                </div>
+                <div className="absolute right-3 top-3 rounded-lg bg-amber-500/20 px-2 py-1 text-xs text-amber-400 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+                  {image.category}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Lightbox */}
       <AnimatePresence>
         {selectedImage && (
           <motion.div
@@ -118,23 +202,29 @@ export default function Gallery() {
           >
             <button
               onClick={() => setSelectedImage(null)}
-              className="absolute top-6 right-6 p-3 rounded-full bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors z-10"
+              className="absolute right-6 top-6 z-10 rounded-full bg-amber-500/10 p-3 text-amber-400 transition-colors hover:bg-amber-500/20"
             >
-              <X className="w-6 h-6" />
+              <X className="h-6 w-6" />
             </button>
 
             <button
-              onClick={(e) => { e.stopPropagation(); navigateImage('prev'); }}
-              className="absolute left-6 p-3 rounded-full bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors z-10"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateImage('prev');
+              }}
+              className="absolute left-6 z-10 rounded-full bg-amber-500/10 p-3 text-amber-400 transition-colors hover:bg-amber-500/20"
             >
-              <ChevronLeft className="w-6 h-6" />
+              <ChevronLeft className="h-6 w-6" />
             </button>
 
             <button
-              onClick={(e) => { e.stopPropagation(); navigateImage('next'); }}
-              className="absolute right-6 p-3 rounded-full bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors z-10"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateImage('next');
+              }}
+              className="absolute right-6 z-10 rounded-full bg-amber-500/10 p-3 text-amber-400 transition-colors hover:bg-amber-500/20"
             >
-              <ChevronRight className="w-6 h-6" />
+              <ChevronRight className="h-6 w-6" />
             </button>
 
             <motion.div
@@ -142,18 +232,24 @@ export default function Gallery() {
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
-              className="max-w-5xl max-h-[85vh] mx-4"
+              className="mx-4 max-w-5xl"
             >
               <img
                 src={selectedImage.src}
                 alt={selectedImage.title}
-                className="max-w-full max-h-[75vh] object-contain rounded-xl"
+                className="max-h-[75vh] max-w-full rounded-xl object-contain"
               />
-              <div className="text-center mt-4">
-                <h3 className="text-xl text-amber-400 font-semibold" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
+              <div className="mt-4 text-center">
+                <h3
+                  className="text-xl font-semibold text-amber-400"
+                  style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+                >
                   {selectedImage.title}
                 </h3>
-                <p className="text-amber-200/60" style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}>
+                <p
+                  className="text-amber-200/60"
+                  style={{ fontFamily: 'Noto Nastaliq Urdu, serif' }}
+                >
                   {selectedImage.description}
                 </p>
               </div>

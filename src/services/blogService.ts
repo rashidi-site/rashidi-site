@@ -105,6 +105,38 @@ export async function updateBlogPostViews(id: string, views: number): Promise<vo
   if (error) throw error;
 }
 
+export interface BlogPostFormData {
+  title: string;
+  content: string;
+  excerpt: string;
+  slug: string;
+  author: string;
+  cover_image: string;
+  featured: boolean;
+  status: "draft" | "published";
+  category: string;
+}
+
+export async function createBlogPost(payload: BlogPostFormData): Promise<void> {
+  const { error } = await supabase.from("blog_posts").insert([
+    {
+      ...payload,
+      views: 0,
+    },
+  ]);
+
+  if (error) throw error;
+}
+
+export async function updateBlogPost(id: string, payload: Partial<BlogPostFormData>): Promise<void> {
+  const { error } = await supabase
+    .from("blog_posts")
+    .update({ ...payload, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
 export async function deleteBlogPost(id: string): Promise<void> {
   const { error } = await supabase.from("blog_posts").delete().eq("id", id);
 
